@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f4f5;
+  --foreground: #18181b;
+  --foreground-muted: #71717a;
+  --surface: #ffffff;
+  --surface-raised: #fafafa;
+  --border: #e4e4e7;
+  --accent: #e31b23;
+  --accent-muted: rgba(227, 27, 35, 0.08);
+  --accent-hover: #c41820;
+  --alarm-ok: #15803d;
+  --alarm-warn: #b45309;
+  --alarm-critical: #dc2626;
+  /* Operator canvas — dark HMI shell inside light UI */
+  --canvas-background: #0f172a;
+  --canvas-foreground: #e2e8f0;
+  --canvas-foreground-muted: #94a3b8;
+  --canvas-border: #334155;
+  --canvas-surface: #1e293b;
 }
 
 @theme inline {
@@ -12,15 +28,147 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+.section-kicker {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.section-kicker::before {
+  content: "// ";
+  color: var(--foreground-muted);
+}
+
+.section-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+
+.panel,
+.card-surface {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 1rem;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.step-badge {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--foreground-muted);
+}
+
+.step-badge-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  transition: background-color 0.15s;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hmi-canvas-shell {
+  background: var(--canvas-background);
+  border-color: var(--canvas-border);
+  color: var(--canvas-foreground);
+  --surface: var(--canvas-surface);
+  --foreground: var(--canvas-foreground);
+  --foreground-muted: var(--canvas-foreground-muted);
+  --border: var(--canvas-border);
+  --background: var(--canvas-background);
+  --accent: #22d3ee;
+  --accent-muted: rgba(34, 211, 238, 0.15);
+}
+
+/* Demo: lock workspace height so panels scroll independently */
+.demo-workspace {
+  height: calc(100dvh - 9.5rem);
+  min-height: 32rem;
+}
+
+.demo-panels {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+@media (max-width: 1023px) {
+  .demo-workspace {
+    height: auto;
+    min-height: calc(100dvh - 9.5rem);
+    overflow: visible;
+  }
+
+  .demo-panels {
+    grid-template-rows: none;
+    overflow: visible;
+  }
+
+  .demo-panels > section {
+    min-height: 24rem;
+  }
 }

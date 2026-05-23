@@ -1,0 +1,218 @@
+diagram:
+  title: "PFD Sample"
+  source: "docs/examples/pid_example.png"
+  canvas:
+    width: 1200
+    height: 700
+
+nodes:
+  - id: feed_tank
+    type: vertical_tank
+    label: "FEED TANK"
+    pos: { x: 0.07, y: 0.62 }
+    tags: [LT-101]
+    instruments:
+      - tag: LT-101
+        type: LT
+        unit: "%"
+
+  - id: pump_feed
+    type: pump
+    label: "P-101"
+    pos: { x: 0.14, y: 0.62 }
+
+  - id: furnace
+    type: furnace
+    label: "FURNACE"
+    pos: { x: 0.22, y: 0.48 }
+    tags: [TT-102]
+    instruments:
+      - tag: TT-102
+        type: TT
+        unit: "°F"
+
+  - id: column
+    type: distillation_column
+    label: "COLUMN"
+    pos: { x: 0.38, y: 0.42 }
+    tags: [PT-201, TT-201]
+    instruments:
+      - tag: PT-201
+        type: PT
+        unit: "psig"
+      - tag: TT-201
+        type: TT
+        unit: "°F"
+
+  - id: cooling_tower
+    type: cooling_tower
+    label: "COOLING TOWER"
+    pos: { x: 0.52, y: 0.1 }
+
+  - id: hx_overhead
+    type: heat_exchanger
+    label: "E-201"
+    pos: { x: 0.48, y: 0.22 }
+
+  - id: drum
+    type: horizontal_drum
+    label: "DRUM"
+    pos: { x: 0.62, y: 0.15 }
+    tags: [LT-202]
+
+  - id: vacuum_pump
+    type: vacuum_pump
+    label: "VP-201"
+    pos: { x: 0.72, y: 0.12 }
+
+  - id: product_tank_1
+    type: vertical_tank
+    label: "PRODUCT TANK 1"
+    pos: { x: 0.82, y: 0.12 }
+    tags: [LT-301]
+
+  - id: reactor
+    type: reactor
+    label: "REACTORS"
+    pos: { x: 0.72, y: 0.42 }
+    tags: [TT-401]
+
+  - id: hx_reactor
+    type: heat_exchanger
+    label: "E-401"
+    pos: { x: 0.82, y: 0.42 }
+
+  - id: product_tank_2
+    type: vertical_tank
+    label: "PRODUCT TANK 2"
+    pos: { x: 0.92, y: 0.42 }
+    tags: [LT-402]
+
+  - id: pump_bottoms
+    type: pump
+    label: "P-202"
+    pos: { x: 0.28, y: 0.78 }
+
+  - id: bottoms_tank
+    type: vertical_tank
+    label: "BOTTOMS TANK"
+    pos: { x: 0.1, y: 0.82 }
+    tags: [LT-203]
+
+  - id: hx_reboiler
+    type: heat_exchanger
+    label: "E-202"
+    pos: { x: 0.48, y: 0.72 }
+
+  - id: boiler
+    type: boiler
+    label: "BOILER"
+    pos: { x: 0.58, y: 0.82 }
+
+alarms:
+  LT-101: { lo: 10, hi: 90 }
+  PT-201: { hi: 150, hiHi: 175 }
+  TT-102: { hi: 350, hiHi: 400 }
+  LT-202: { hi: 85, hiHi: 95 }
+  LT-301: { hi: 90, hiHi: 95 }
+  LT-402: { hi: 90, hiHi: 95 }
+  LT-203: { lo: 15, loLo: 5 }
+
+edges:
+  - id: feed_to_pump
+    from: { node: feed_tank, port: outlet }
+    to: { node: pump_feed, port: inlet }
+    kind: process
+
+  - id: pump_to_furnace
+    from: { node: pump_feed, port: outlet }
+    to: { node: furnace, port: inlet }
+    kind: process
+    tags: [FT-101]
+    instruments:
+      - tag: FT-101
+        type: FT
+        unit: gpm
+        attach: { t: 0.5 }
+
+  - id: furnace_to_column
+    from: { node: furnace, port: outlet }
+    to: { node: column, port: feed }
+    kind: process
+
+  - id: column_to_hx
+    from: { node: column, port: top }
+    to: { node: hx_overhead, port: inlet }
+    kind: process
+    tags: [PT-301]
+    instruments:
+      - tag: PT-301
+        type: PT
+        unit: psig
+        attach: { t: 0.4 }
+
+  - id: hx_to_cooling
+    from: { node: hx_overhead, port: outlet }
+    to: { node: cooling_tower, port: inlet }
+    kind: process
+
+  - id: hx_to_drum
+    from: { node: hx_overhead, port: outlet }
+    to: { node: drum, port: inlet }
+    kind: process
+
+  - id: drum_to_vacuum
+    from: { node: drum, port: outlet }
+    to: { node: vacuum_pump, port: inlet }
+    kind: process
+
+  - id: drum_to_product1
+    from: { node: drum, port: outlet }
+    to: { node: product_tank_1, port: inlet }
+    kind: process
+
+  - id: column_to_reactor
+    from: { node: column, port: side }
+    to: { node: reactor, port: inlet }
+    kind: process
+    tags: [FT-401]
+    instruments:
+      - tag: FT-401
+        type: FT
+        unit: gpm
+        attach: { t: 0.5 }
+
+  - id: reactor_to_hx_r
+    from: { node: reactor, port: outlet }
+    to: { node: hx_reactor, port: inlet }
+    kind: process
+
+  - id: hx_r_to_product2
+    from: { node: hx_reactor, port: outlet }
+    to: { node: product_tank_2, port: inlet }
+    kind: process
+
+  - id: column_to_reboiler
+    from: { node: column, port: bottom }
+    to: { node: hx_reboiler, port: inlet }
+    kind: process
+
+  - id: reboiler_to_boiler
+    from: { node: hx_reboiler, port: outlet }
+    to: { node: boiler, port: inlet }
+    kind: utility
+
+  - id: boiler_to_column
+    from: { node: boiler, port: outlet }
+    to: { node: column, port: feed }
+    kind: utility
+
+  - id: column_to_pump_b
+    from: { node: column, port: bottom }
+    to: { node: pump_bottoms, port: inlet }
+    kind: process
+
+  - id: pump_to_bottoms
+    from: { node: pump_bottoms, port: outlet }
+    to: { node: bottoms_tank, port: inlet }
+    kind: process
