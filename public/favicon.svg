@@ -1,0 +1,6 @@
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Diamond shape -->
+  <path d="M20 4L4 20L20 36L36 20L20 4Z" stroke="#DC2626" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- X inside -->
+  <path d="M12 12L28 28M28 12L12 28" stroke="#DC2626" stroke-width="3" stroke-linecap="round"/>
+</svg>

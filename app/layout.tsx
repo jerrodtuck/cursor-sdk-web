@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "P&ID → HMI | Cursor SDK Demo",
   description:
     "Open-source demo by Jerrod Tuck — turn P&ID and PFD drawings into live SVG process-flow HMIs with the Cursor SDK.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
