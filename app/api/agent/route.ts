@@ -27,12 +27,18 @@ function sseEncode(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-function createLocalAgent(apiKey: string) {
-  return Agent.create({
+const DEFAULT_MODEL = { id: "composer-2.5" } as const;
+
+function localAgentOptions(apiKey: string) {
+  return {
     apiKey,
-    model: { id: "composer-2.5" },
+    model: DEFAULT_MODEL,
     local: { cwd: process.cwd(), settingSources: [] },
-  });
+  };
+}
+
+function createLocalAgent(apiKey: string) {
+  return Agent.create(localAgentOptions(apiKey));
 }
 
 async function openAgent(apiKey: string, agentId?: string) {
@@ -41,7 +47,8 @@ async function openAgent(apiKey: string, agentId?: string) {
   }
 
   try {
-    return { agent: await Agent.resume(agentId, { apiKey }), resumed: true as const };
+    const agent = await Agent.resume(agentId, localAgentOptions(apiKey));
+    return { agent, resumed: true as const };
   } catch (err) {
     if (err instanceof CursorAgentError) {
       console.warn("[agent] resume failed, creating fresh agent:", err.message);
@@ -94,12 +101,17 @@ export async function POST(request: Request): Promise<Response> {
           ? `${buildSystemPrompt()}\n\n${userText}`
           : userText;
 
+        const sendOptions = { model: DEFAULT_MODEL };
+
         const run = body.image
-          ? await activeAgent.send({
-              text: promptText,
-              images: [{ data: body.image.data, mimeType: body.image.mimeType }],
-            })
-          : await activeAgent.send(promptText);
+          ? await activeAgent.send(
+              {
+                text: promptText,
+                images: [{ data: body.image.data, mimeType: body.image.mimeType }],
+              },
+              sendOptions,
+            )
+          : await activeAgent.send(promptText, sendOptions);
 
         console.info("[agent] started run", { agentId: activeAgent.agentId, runId: run.id });
 
