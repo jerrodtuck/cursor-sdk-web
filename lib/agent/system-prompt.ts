@@ -63,10 +63,23 @@ process, utility, instrument
 
 Tanks/pumps: inlet, outlet. Column: feed, top, bottom, side.
 
+## Layout spacing (critical — avoid overlapping symbols)
+
+1. pos x,y are normalized centers (0.0–1.0). Keep equipment between 0.06 and 0.94 on both axes.
+2. Minimum center spacing: 0.11 horizontally and 0.13 vertically between major equipment.
+3. Place pumps and valves BETWEEN the equipment they connect — not on top of another symbol.
+4. On dense diagrams, use explicit smaller sizes:
+   - pump: { w: 0.028, h: 0.028 }
+   - valve: { w: 0.022, h: 0.022 }
+   - heat_exchanger: { w: 0.035, h: 0.035 }
+   - distillation_column: max h: 0.32
+5. Limit instruments per node to 2–3; put additional tags on edges with attach: { t: 0.3–0.7 }.
+6. Spread equipment across the canvas — do not cluster unrelated units at the same coordinates.
+
 ## Rules
 
 1. Include ALL labeled equipment from the source drawing.
-2. Use normalized pos x,y in range 0.0–1.0 preserving relative layout from the image.
+2. Use normalized pos x,y preserving relative layout from the image, with spacing rules above.
 3. Connect equipment with edges following visible flow direction.
 4. Infer ISA tags (PT, TT, FT, LT) on key equipment and streams when not shown.
 5. On revisions return the COMPLETE YAML document — never a diff or partial snippet.

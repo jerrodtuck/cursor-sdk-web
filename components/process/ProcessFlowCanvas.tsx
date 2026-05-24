@@ -185,13 +185,16 @@ export function ProcessFlowCanvas({ config }: ProcessFlowCanvasProps) {
                     {instruments.map((inst, i) => {
                       const spread =
                         instrumentCount > 1
-                          ? (i - (instrumentCount - 1) / 2) * 58
+                          ? (i - (instrumentCount - 1) / 2) * 72
                           : 0;
+                      const row = Math.floor(i / 3);
+                      const yOffset = -36 - row * 48;
+
                       return (
                         <InstrumentBubble
                           key={inst.tag}
                           x={nl.w / 2 + spread}
-                          y={-36}
+                          y={yOffset}
                           tag={inst.tag}
                           tagState={tagStates[inst.tag]}
                         />

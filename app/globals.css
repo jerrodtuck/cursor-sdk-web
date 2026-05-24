@@ -156,6 +156,12 @@ body::before {
   grid-template-rows: minmax(0, 1fr);
 }
 
+@media (min-width: 1024px) {
+  .demo-panels {
+    grid-template-rows: minmax(0, 1fr) minmax(11rem, 26vh);
+  }
+}
+
 @media (max-width: 1023px) {
   .demo-workspace {
     height: auto;

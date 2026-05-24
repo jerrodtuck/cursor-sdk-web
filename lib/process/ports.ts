@@ -24,7 +24,7 @@ const DEFAULTS: Record<NodeType, SymbolDefaults> = {
   },
   distillation_column: {
     w: 0.05,
-    h: 0.45,
+    h: 0.38,
     ports: {
       feed: { x: 0, y: 0.55 },
       top: { x: 0.5, y: 0 },
@@ -33,13 +33,13 @@ const DEFAULTS: Record<NodeType, SymbolDefaults> = {
     },
   },
   furnace: {
-    w: 0.1,
-    h: 0.2,
+    w: 0.09,
+    h: 0.16,
     ports: { inlet: { x: 0, y: 0.75 }, outlet: { x: 1, y: 0.5 } },
   },
   cooling_tower: {
-    w: 0.12,
-    h: 0.12,
+    w: 0.1,
+    h: 0.1,
     ports: { inlet: { x: 0, y: 0.8 }, outlet: { x: 1, y: 0.8 } },
   },
   reactor: {
