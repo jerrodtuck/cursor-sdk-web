@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   clearStoredAgentId,
   getStoredAgentId,
@@ -63,6 +63,18 @@ export function AgentChatPanel({
   const [error, setError] = useState<string | null>(null);
   const [lastYaml, setLastYaml] = useState<string | null>(null);
   const assistantBufferRef = useRef("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+  }, []);
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [input, resizeTextarea]);
 
   const sendPrompt = useCallback(async () => {
     const prompt = input.trim();
@@ -178,11 +190,20 @@ export function AgentChatPanel({
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reach agent");
-      setMessages((prev) => prev.slice(0, -1));
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === "assistant" && !last.content) {
+          next.pop();
+        }
+        return next;
+      });
     } finally {
       setStreaming(false);
     }
   }, [apiConnected, currentYaml, input, onAuthError, onYamlApplied, streaming]);
+
+  const canSend = apiConnected && !streaming && input.trim().length > 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -254,33 +275,54 @@ export function AgentChatPanel({
         </button>
       ) : null}
 
-      <div className="mt-2 flex shrink-0 gap-2">
-        <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void sendPrompt();
-            }
-          }}
-          disabled={!apiConnected || streaming}
-          placeholder={
+      <div className="mt-2 shrink-0">
+        <div
+          className={`rounded-xl border bg-[var(--surface)] p-2 shadow-sm transition-shadow ${
             apiConnected
-              ? "Refine the HMI config..."
-              : "Connect your Cursor API key above to use chat"
-          }
-          rows={2}
-          className="min-h-[56px] flex-1 resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] p-2 text-xs text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--accent)]/40 disabled:opacity-50"
-        />
-        <button
-          type="button"
-          onClick={() => void sendPrompt()}
-          disabled={!apiConnected || streaming || !input.trim()}
-          className="self-end rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              ? "border-[var(--border)] focus-within:border-[var(--accent)]/40 focus-within:ring-2 focus-within:ring-[var(--accent)]/20"
+              : "border-[var(--border)] opacity-60"
+          }`}
         >
-          {streaming ? "…" : "Send"}
-        </button>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                if (canSend) void sendPrompt();
+              }
+            }}
+            disabled={!apiConnected || streaming}
+            placeholder={
+              apiConnected
+                ? "Describe changes to the HMI config…"
+                : "Connect your Cursor API key above to use chat"
+            }
+            rows={1}
+            className="max-h-[120px] w-full resize-none border-0 bg-transparent px-1 py-1 text-xs leading-relaxed text-[var(--foreground)] outline-none placeholder:text-[var(--foreground-muted)] disabled:cursor-not-allowed"
+          />
+          <div className="mt-1 flex items-center justify-between gap-2 px-1">
+            <span className="text-[10px] text-[var(--foreground-muted)]">
+              {apiConnected ? "Enter to send · Shift+Enter for newline" : ""}
+            </span>
+            <button
+              type="button"
+              onClick={() => void sendPrompt()}
+              disabled={!canSend}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {streaming ? (
+                <>
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Sending
+                </>
+              ) : (
+                "Send"
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

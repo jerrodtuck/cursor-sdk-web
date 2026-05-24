@@ -1,4 +1,5 @@
 import { getSymbolDefaults, resolvePortName } from "./ports";
+import { deoverlapNodeLayouts, scaledSymbolSize } from "./deoverlap";
 import type { ProcessEdge, ProcessHmiConfig, ProcessNode } from "./schema";
 
 export interface Point {
@@ -22,15 +23,18 @@ export interface EdgeLayout {
 
 export function resolveNodeLayouts(config: ProcessHmiConfig): NodeLayout[] {
   const { width, height } = config.diagram.canvas;
+  const nodeCount = config.nodes.length;
 
-  return config.nodes.map((node) => {
-    const defaults = getSymbolDefaults(node.type);
-    const w = (node.size?.w ?? defaults.w) * width;
-    const h = (node.size?.h ?? defaults.h) * height;
+  const layouts = config.nodes.map((node) => {
+    const sized = scaledSymbolSize(node.type, nodeCount, node.size);
+    const w = sized.w * width;
+    const h = sized.h * height;
     const x = node.pos.x * width - w / 2;
     const y = node.pos.y * height - h / 2;
     return { id: node.id, node, x, y, w, h };
   });
+
+  return deoverlapNodeLayouts(layouts, width, height);
 }
 
 export function resolvePortPoint(

@@ -8,8 +8,9 @@ let pdfjsReady: Promise<PdfJsModule> | null = null;
 
 async function getPdfJs(): Promise<PdfJsModule> {
   if (!pdfjsReady) {
-    pdfjsReady = import("pdfjs-dist").then((pdfjs) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    pdfjsReady = import("pdfjs-dist").then(async (pdfjs) => {
+      const workerModule = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
+      pdfjs.GlobalWorkerOptions.workerSrc = workerModule.default;
       return pdfjs;
     });
   }
