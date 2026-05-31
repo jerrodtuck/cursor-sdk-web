@@ -1,18 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { PipeEdge } from "@/components/process/edges/PipeEdge";
-import { InstrumentBubble } from "@/components/process/instruments/InstrumentBubble";
-import { ProcessSymbol } from "@/components/process/symbols/ProcessSymbol";
-import {
-  resolveEdgeLayouts,
-  resolveNodeLayouts,
-} from "@/lib/process/layout";
-import {
-  activeAlarms,
-  buildTagStates,
-  type TagState,
-} from "@/lib/process/mock-tags";
+import { CanvasSvg, getCanvasDimensions } from "@/components/process/CanvasSvg";
+import { useMockTagTick } from "@/components/process/usePanZoom";
+import { resolveEdgeLayouts, resolveNodeLayouts } from "@/lib/process/layout";
+import { activeAlarms, buildTagStates, type TagState } from "@/lib/process/mock-tags";
 import type { ProcessHmiConfig } from "@/lib/process/schema";
 
 interface ProcessFlowCanvasProps {
@@ -31,53 +23,67 @@ function getServerSnapshot() {
   return false;
 }
 
-export function ProcessFlowCanvas({ config }: ProcessFlowCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mounted = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
-  const [tick, setTick] = useState(0);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragging = useRef(false);
-  const lastPos = useRef({ x: 0, y: 0 });
+function AlarmBanner({ mounted, alarms }: { mounted: boolean; alarms: Array<{ tag: string }> }) {
+  if (mounted && alarms.length > 0) {
+    return (
+      <div className="shrink-0 rounded border border-[var(--alarm-critical)]/50 bg-red-950/30 px-2 py-1 text-xs text-[var(--alarm-critical)]">
+        {alarms.length} active alarm{alarms.length > 1 ? "s" : ""}: {alarms.map((a) => a.tag).join(", ")}
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (!mounted) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), 1000);
-    return () => window.clearInterval(id);
-  }, [mounted]);
+  return (
+    <div className="shrink-0 rounded border border-[var(--alarm-ok)]/40 bg-emerald-950/20 px-2 py-1 text-xs text-[var(--alarm-ok)]">
+      {mounted ? "All tags normal" : "Loading live tags…"}
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+function EmptyCanvasState() {
+  return (
+    <div className="hmi-canvas-shell flex h-full min-h-0 items-center justify-center rounded-lg border p-4 text-sm text-[var(--foreground-muted)]">
+      Valid process-hmi.yaml required
+    </div>
+  );
+}
 
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      setZoom((z) => Math.min(2.5, Math.max(0.4, z - e.deltaY * 0.001)));
-    };
-
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [mounted, config]);
-
+function useCanvasModel(config: ProcessHmiConfig | null, mounted: boolean, tick: number) {
   const tagStates = useMemo<Record<string, TagState>>(
     () => (config && mounted ? buildTagStates(config, tick) : {}),
     [config, mounted, tick],
   );
-
   const alarms = useMemo(() => activeAlarms(tagStates), [tagStates]);
-
-  const nodeLayouts = useMemo(
-    () => (config ? resolveNodeLayouts(config) : []),
-    [config],
-  );
-
+  const nodeLayouts = useMemo(() => (config ? resolveNodeLayouts(config) : []), [config]);
   const edgeLayouts = useMemo(
     () => (config ? resolveEdgeLayouts(config, nodeLayouts) : []),
     [config, nodeLayouts],
   );
 
-  const { width, height } = config?.diagram.canvas ?? { width: 1200, height: 700 };
+  return { tagStates, alarms, nodeLayouts, edgeLayouts };
+}
+
+export function ProcessFlowCanvas({ config }: ProcessFlowCanvasProps) {
+  const mounted = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
+  const tick = useMockTagTick(mounted);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragging = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const { width, height } = config ? getCanvasDimensions(config) : { width: 1200, height: 700 };
+  const model = useCanvasModel(config, mounted, tick);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setZoom((z) => Math.min(2.5, Math.max(0.4, z - e.deltaY * 0.001)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [config?.diagram.title]);
 
   const screenToSvgScale = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -100,10 +106,7 @@ export function ProcessFlowCanvas({ config }: ProcessFlowCanvasProps) {
       const dy = e.clientY - lastPos.current.y;
       lastPos.current = { x: e.clientX, y: e.clientY };
       const scale = screenToSvgScale();
-      setPan((p) => ({
-        x: p.x + (dx * scale) / zoom,
-        y: p.y + (dy * scale) / zoom,
-      }));
+      setPan((p) => ({ x: p.x + (dx * scale) / zoom, y: p.y + (dy * scale) / zoom }));
     },
     [screenToSvgScale, zoom],
   );
@@ -116,13 +119,7 @@ export function ProcessFlowCanvas({ config }: ProcessFlowCanvasProps) {
     }
   }, []);
 
-  if (!config) {
-    return (
-      <div className="hmi-canvas-shell flex h-full min-h-0 items-center justify-center rounded-lg border p-4 text-sm text-[var(--foreground-muted)]">
-        Valid process-hmi.yaml required
-      </div>
-    );
-  }
+  if (!config) return <EmptyCanvasState />;
 
   return (
     <div className="hmi-canvas-shell flex h-full min-h-0 flex-col gap-2 rounded-lg border p-2">
@@ -131,18 +128,10 @@ export function ProcessFlowCanvas({ config }: ProcessFlowCanvasProps) {
         <span>Scroll to zoom · drag to pan</span>
       </div>
 
-      {mounted && alarms.length > 0 ? (
-        <div className="shrink-0 rounded border border-[var(--alarm-critical)]/50 bg-red-950/30 px-2 py-1 text-xs text-[var(--alarm-critical)]">
-          {alarms.length} active alarm{alarms.length > 1 ? "s" : ""}:{" "}
-          {alarms.map((a) => a.tag).join(", ")}
-        </div>
-      ) : (
-        <div className="shrink-0 rounded border border-[var(--alarm-ok)]/40 bg-emerald-950/20 px-2 py-1 text-xs text-[var(--alarm-ok)]">
-          {mounted ? "All tags normal" : "Loading live tags…"}
-        </div>
-      )}
+      <AlarmBanner mounted={mounted} alarms={model.alarms} />
 
       <div
+        key={config.diagram.title}
         ref={containerRef}
         className="relative min-h-0 flex-1 overflow-hidden rounded-md bg-[var(--canvas-background)]"
         onPointerDown={onPointerDown}
@@ -156,55 +145,15 @@ export function ProcessFlowCanvas({ config }: ProcessFlowCanvasProps) {
             Loading preview…
           </div>
         ) : (
-          <svg
-            width="100%"
-            height="100%"
-            viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ pointerEvents: "none" }}
-          >
-            <g
-              transform={`translate(${pan.x} ${pan.y}) translate(${width / 2} ${height / 2}) scale(${zoom}) translate(${-width / 2} ${-height / 2})`}
-            >
-              <rect width={width} height={height} fill="transparent" />
-              {edgeLayouts.map((el) => (
-                <PipeEdge key={el.edge.id} layout={el} tagStates={tagStates} />
-              ))}
-              {nodeLayouts.map((nl) => {
-                const instruments = nl.node.instruments ?? [];
-                const instrumentCount = instruments.length;
-
-                return (
-                  <g key={nl.id} transform={`translate(${nl.x}, ${nl.y})`}>
-                    <ProcessSymbol
-                      type={nl.node.type}
-                      width={nl.w}
-                      height={nl.h}
-                      label={nl.node.label}
-                    />
-                    {instruments.map((inst, i) => {
-                      const spread =
-                        instrumentCount > 1
-                          ? (i - (instrumentCount - 1) / 2) * 72
-                          : 0;
-                      const row = Math.floor(i / 3);
-                      const yOffset = -36 - row * 48;
-
-                      return (
-                        <InstrumentBubble
-                          key={inst.tag}
-                          x={nl.w / 2 + spread}
-                          y={yOffset}
-                          tag={inst.tag}
-                          tagState={tagStates[inst.tag]}
-                        />
-                      );
-                    })}
-                  </g>
-                );
-              })}
-            </g>
-          </svg>
+          <CanvasSvg
+            width={width}
+            height={height}
+            pan={pan}
+            zoom={zoom}
+            tagStates={model.tagStates}
+            nodeLayouts={model.nodeLayouts}
+            edgeLayouts={model.edgeLayouts}
+          />
         )}
       </div>
     </div>

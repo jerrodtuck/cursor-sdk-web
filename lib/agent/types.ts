@@ -7,3 +7,8 @@ export interface DiagramGenerateRequest {
   prompt: string;
   image: AgentImagePayload;
 }
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
